@@ -15,16 +15,19 @@ class AlgodClient:
     Args:
         algod_token (str): algod API token
         algod_address (str): algod address
+        extended_header (dict, optional): extra header name/value for all requests
 
     Attributes:
         algod_token (str)
         algod_address (str)
+        extended_header (dict)
     """
-    def __init__(self, algod_token, algod_address):
+    def __init__(self, algod_token, algod_address, extended_header=None):
         self.algod_token = algod_token
         self.algod_address = algod_address
+        self.extended_header = extended_header
 
-    def algod_request(self, method, requrl, params=None, data=None):
+    def algod_request(self, method, requrl, params=None, data=None, opt_header=None):
         """
         Execute a given request.
 
@@ -33,16 +36,23 @@ class AlgodClient:
             requrl (str): url for the request
             params (dict, optional): parameters for the request
             data (dict, optional): data in the body of the request
+            opt_header (dict option): additional header for request
 
         Returns:
             dict: loaded from json response body
         """
-        if requrl in constants.no_auth:
-            header = {}
-        else:
-            header = {
+        header = {}
+
+        if self.extended_header:
+            header.update(self.extended_header)
+
+        if opt_header:
+            header.update(opt_header)
+
+        if requrl not in constants.no_auth:
+            header.update({
                 constants.algod_auth_header: self.algod_token
-                }
+                })
 
         if requrl not in constants.unversioned_paths:
             requrl = constants.api_version_path_prefix + requrl
@@ -184,35 +194,37 @@ class AlgodClient:
         return self.algod_request("GET", req)
 
     def suggested_params(self):
-        """Return suggested transaction paramters."""
+        """Return suggested transaction parameters."""
         req = "/transactions/params"
         return self.algod_request("GET", req)
 
-    def send_raw_transaction(self, txn):
+    def send_raw_transaction(self, txn, request_header=None):
         """
         Broadcast a signed transaction to the network.
 
         Args:
             txn (str): transaction to send, encoded in base64
+            request_header (dict, optional): additional header for request
 
         Returns:
             str: transaction ID
         """
         txn = base64.b64decode(txn)
         req = "/transactions"
-        return self.algod_request("POST", req, data=txn)["txId"]
+        return self.algod_request("POST", req, data=txn, opt_header=request_header)["txId"]
 
-    def send_transaction(self, txn):
+    def send_transaction(self, txn, request_header=None):
         """
         Broadcast a signed transaction object to the network.
 
         Args:
             txn (SignedTransaction or MultisigTransaction): transaction to send
+            request_header (dict, optional): additional header for request
 
         Returns:
             str: transaction ID
         """
-        return self.send_raw_transaction(encoding.msgpack_encode(txn))
+        return self.send_raw_transaction(encoding.msgpack_encode(txn), request_header)
 
     def block_info(self, round):
         """
