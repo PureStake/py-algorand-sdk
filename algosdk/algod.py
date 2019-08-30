@@ -213,7 +213,7 @@ class AlgodClient:
         req = "/transactions"
         return self.algod_request("POST", req, data=txn, **kwargs)["txId"]
 
-    def send_transaction(self, txn, request_header=None):
+    def send_transaction(self, txn, **kwargs):
         """
         Broadcast a signed transaction object to the network.
 
@@ -224,7 +224,7 @@ class AlgodClient:
         Returns:
             str: transaction ID
         """
-        return self.send_raw_transaction(encoding.msgpack_encode(txn), request_header)
+        return self.send_raw_transaction(encoding.msgpack_encode(txn), **kwargs)
 
     def block_info(self, round, **kwargs):
         """
